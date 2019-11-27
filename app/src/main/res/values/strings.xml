@@ -7,6 +7,15 @@
     <string name="nav_header_desc">Navigation header</string>
     <string name="action_settings">Settings</string>
 
+    <string name="Back">返回</string>
+    <string name="True">确定</string>
+    <string name="time_edit_title">标题</string>
+    <string name="time_edit_addition">备注</string>
+    <string name="time_edit_title_content">生日,纪念日,节日,考试…</string>
+    <string name="time_edit_addition_content">想说的话,目标,格言…</string>
+    <string name="time_edit_date">日期</string>
+    <string name="time_edit_picture">图片</string>
+
     <string name="menu_timing">计时</string>
     <string name="menu_tag">标签</string>
     <string name="menu_parts">小部件</string>
