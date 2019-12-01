@@ -50,8 +50,6 @@ public class MainActivity extends AppCompatActivity {
     private FloatingActionButton fab;
     private NavigationView navigationView;
     private DrawerLayout drawerlayout;
-    private ColorFilter colorFilter;
-    private Drawable drawable;
     private Context context;
 
     @Override
@@ -63,7 +61,6 @@ public class MainActivity extends AppCompatActivity {
         navigationView = (NavigationView) findViewById(R.id.nav_view);
         drawerlayout= (DrawerLayout) findViewById(R.id.drawer_layout);
         context=this;
-        drawable=ResourcesCompat.getDrawable(getResources(), R.drawable.side_nav_bar, null); //获取背景图
 
         // Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -72,6 +69,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 Intent intent=new Intent(MainActivity.this,TimeEditActivity.class);
+                intent.putExtra("color", fab.getSolidColor());//传输主题颜色
                 startActivityForResult(intent, REQUEST_CODE_NEW_TIME);
                 //Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG).setAction("Action", null).show();
             }
@@ -121,8 +119,8 @@ public class MainActivity extends AppCompatActivity {
                     String addition = data.getStringExtra("time_addition");
                     String date = data.getStringExtra("time_date");
 
-                    theBooks.add(position+1, new Book(title,addition,date,R.drawable.new_book));   //在当前位置下一位插入
-                    theAdapter.notifyDataSetChanged(); //通知adapter底层数据已改变，修改数据
+                    //theBooks.add(position+1, new Book(title,addition,date,R.drawable.new_book));   //在当前位置下一位插入
+                    //theAdapter.notifyDataSetChanged(); //通知adapter底层数据已改变，修改数据
                     Toast.makeText(this, "新建成功", Toast.LENGTH_SHORT).show();
                 }
                 break;
@@ -130,8 +128,6 @@ public class MainActivity extends AppCompatActivity {
     }   //从EditActivty返回后的操作
 
     public void changeThemeColor(int color){
-        colorFilter = new PorterDuffColorFilter(color,PorterDuff.Mode.SRC_IN);
-        drawable.setColorFilter(colorFilter);
         toolbar.setBackgroundColor(color);
         fab.setBackgroundTintList(ColorStateList.valueOf(color));
     } //修改主题颜色

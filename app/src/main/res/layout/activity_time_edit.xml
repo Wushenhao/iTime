@@ -4,8 +4,12 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:gravity="top"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:focusable="true"
+    android:focusableInTouchMode="true">
+
     <RelativeLayout
+        android:id="@+id/edit_relativelayout"
         android:layout_width="match_parent"
         android:layout_height="270dp"
         android:background="@drawable/side_nav_bar"
@@ -92,6 +96,7 @@
     </RelativeLayout>
 
     <ListView
+        android:id="@+id/list_view_setting"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
