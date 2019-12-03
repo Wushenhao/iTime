@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
+import android.content.ContentUris;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -15,11 +16,13 @@ import android.graphics.Color;
 import android.graphics.ColorFilter;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.icu.text.DateFormat;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.StrictMode;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.util.Log;
@@ -44,6 +47,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 import androidx.core.content.res.ResourcesCompat;
 
 import com.example.itime.model.Setting;
@@ -57,7 +61,7 @@ import java.util.Locale;
 public class TimeEditActivity extends AppCompatActivity {
 
     public static final int PHOTO_REQUEST_GALLERY = 901;
-    public static final String PHOTO_FILE_NAME = "默认图片";
+    public static final String PHOTO_FILE_NAME = "default_image.jpg";
     public static final int PHOTO_REQUEST_GALLERY2 = 902;
     public static final int PHOTO_REQUEST_CAMERA = 903;
     public static final int PHOTO_REQUEST_CUT =904;
@@ -68,8 +72,9 @@ public class TimeEditActivity extends AppCompatActivity {
     private Button buttonOk,buttonCancel;
     private SettingArrayAdapter theAdapter;
     private ArrayList<Setting> theSettings;
+    private File tempFile;
+    private Uri filepath;
     private RelativeLayout temp;    //当前背景容器的layout
-    private File tempFile;  //用于保存图片文件
     private Context context;
 
     private ListView item_date;
@@ -84,7 +89,12 @@ public class TimeEditActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_time_edit);
         context=this;
-        RelativeLayout temp=(RelativeLayout)findViewById(R.id.edit_relativelayout);
+
+        StrictMode.VmPolicy.Builder builder = new StrictMode.VmPolicy.Builder();
+        StrictMode.setVmPolicy(builder.build());
+        builder.detectFileUriExposure();
+
+        temp=(RelativeLayout)findViewById(R.id.edit_relativelayout);
         drawable= ResourcesCompat.getDrawable(getResources(), R.drawable.side_nav_bar, null); //获取背景图
         int color= getIntent().getIntExtra("color", Color.rgb(0,150,136));
         changeSettingColor(color);
@@ -192,16 +202,15 @@ public class TimeEditActivity extends AppCompatActivity {
                     //将页面ListView中第一个item的TextView的显示更新为最新时间
                 } //设置时间
 
-                else if (position == 1){
+                else if (position == 2){
 
                     AlertDialog.Builder builder = new AlertDialog.Builder(context);
                     builder.setTitle("选择图片");
-                    builder.setMessage("可以通过相册和照相来修改默认图片！");
+                    builder.setMessage("给新建的提醒时间设置醒目的图片吧！");
                     builder.setPositiveButton("图库", new DialogInterface.OnClickListener() {
 
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
-                            tempFile = new File(Environment.getDataDirectory(), PHOTO_FILE_NAME);
                             gallery();
                         }
                     });
@@ -209,7 +218,6 @@ public class TimeEditActivity extends AppCompatActivity {
 
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
-                            tempFile = new File(Environment.getDataDirectory(), PHOTO_FILE_NAME);
                             camera();
                         }
                     });
@@ -231,6 +239,7 @@ public class TimeEditActivity extends AppCompatActivity {
                 // 得到图片的全路径
                 Uri uri = data.getData();
                 String path = getAbsoluteImagePath(context,uri);
+                filepath=Uri.parse("file://"+path);
                 crop(Uri.parse("file://"+path));//调用剪贴图片代码
             }
 
@@ -239,22 +248,25 @@ public class TimeEditActivity extends AppCompatActivity {
                 // 得到图片的全路径
                 Uri uri = data.getData();
                 String path = getAbsoluteImagePath(context,uri);
+                filepath=Uri.parse("file://"+path);
+                Log.e("filepath", filepath.getPath());
+                Log.e("filepath", filepath.toString());
+
                 crop(Uri.parse("file://"+path));//调用剪贴图片代码
             }
 
         }else if (requestCode == PHOTO_REQUEST_CAMERA) {
             crop(Uri.fromFile(tempFile)); //调用剪贴图片代码
+
         }else if (requestCode == PHOTO_REQUEST_CUT) {
             try {
-                Drawable picture=Drawable.createFromPath(tempFile.getPath());
-                temp.setBackground(picture);
+
+                Bitmap bitmap=BitmapFactory.decodeStream(getContentResolver().openInputStream(Uri.fromFile(tempFile)));
+                BitmapDrawable picture = new BitmapDrawable(context.getResources(),bitmap);
                 Log.e("uri", Uri.fromFile(tempFile).toString());
 
-                /*
-                Bitmap bitmap = BitmapFactory.decodeFile(tempFile.getPath());
-                Log.e("uri", Uri.fromFile(tempFile).toString());
-                head_image.setImageBitmap(bitmap);
-                 */
+                temp.setBackground(picture);
+
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -300,45 +312,82 @@ public class TimeEditActivity extends AppCompatActivity {
 
     protected static String getAbsoluteImagePath(Context context, Uri uri)
     {
-        String filePath;
-// can post image
-        if(android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT){
-            String wholeID = DocumentsContract.getDocumentId(uri);
-            String id = wholeID.split(":")[1];
-            String[] column = { MediaStore.Images.Media.DATE_MODIFIED};
-            String sel = MediaStore.Images.Media._ID + "=?";
-            Cursor cursor = context.getContentResolver().query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, column,
-                    sel, new String[] { id }, null);
-            int columnIndex = cursor.getColumnIndex(column[0]);
-            if (cursor.moveToFirst()) {
-                filePath = cursor.getString(columnIndex);
-                cursor.close();
-                return filePath;
+        String filePath = null;
+        if (DocumentsContract.isDocumentUri(context, uri)) {
+            // 如果是document类型的 uri, 则通过document id来进行处理
+            String documentId = DocumentsContract.getDocumentId(uri);
+            if (isMediaDocument(uri)) { // MediaProvider
+                // 使用':'分割
+                String id = documentId.split(":")[1];
+
+                String selection = MediaStore.Images.Media._ID + "=?";
+                String[] selectionArgs = {id};
+                filePath = getDataColumn(context, MediaStore.Images.Media.EXTERNAL_CONTENT_URI, selection, selectionArgs);
+            } else if (isDownloadsDocument(uri)) { // DownloadsProvider
+                Uri contentUri = ContentUris.withAppendedId(Uri.parse("content://downloads/public_downloads"), Long.valueOf(documentId));
+                filePath = getDataColumn(context, contentUri, null, null);
             }
-            return "false";
-        }else{
-            String[] projection = { MediaStore.Images.Media.DATE_MODIFIED };
-            Cursor cursor = context.getContentResolver().query(uri, projection, null, null, null);
-            int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_MODIFIED);
-            cursor.moveToFirst();
-            filePath = cursor.getString(column_index);
-            return filePath;
+        } else if ("content".equalsIgnoreCase(uri.getScheme())){
+            // 如果是 content 类型的 Uri
+            filePath = getDataColumn(context, uri, null, null);
+        } else if ("file".equals(uri.getScheme())) {
+            // 如果是 file 类型的 Uri,直接获取图片对应的路径
+            filePath = uri.getPath();
         }
+        return filePath;
     }  //获得图片的绝对路径
+
+    private static String getDataColumn(Context context, Uri uri, String selection, String[] selectionArgs) {
+        String path = null;
+
+        String[] projection = new String[]{MediaStore.Images.Media.DATA};
+        Cursor cursor = null;
+        try {
+            cursor = context.getContentResolver().query(uri, projection, selection, selectionArgs, null);
+            if (cursor != null && cursor.moveToFirst()) {
+                int columnIndex = cursor.getColumnIndexOrThrow(projection[0]);
+                path = cursor.getString(columnIndex);
+            }
+        } catch (Exception e) {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+        return path;
+    }
+
+    private static boolean isMediaDocument(Uri uri) {
+        return "com.android.providers.media.documents".equals(uri.getAuthority());
+    }
+
+    private static boolean isDownloadsDocument(Uri uri) {
+        return "com.android.providers.downloads.documents".equals(uri.getAuthority());
+    }
 
     public void gallery() {
         Intent intent=new Intent(Intent.ACTION_GET_CONTENT);//ACTION_OPEN_DOCUMENT
+        /*
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("image/jpeg");
+         */
+        File imagePath = new File(Environment.getExternalStorageDirectory(), "Download");
+        tempFile = new File(imagePath, PHOTO_FILE_NAME);
+
         if(android.os.Build.VERSION.SDK_INT>=android.os.Build.VERSION_CODES.KITKAT) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
                 ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 1); //申请储存权限
-   ;
+
+            intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            Uri contentUri = FileProvider.getUriForFile(context, BuildConfig.APPLICATION_ID + ".fileProvider", tempFile);
+            intent.setDataAndType(contentUri, "*/*");
+
             startActivityForResult(intent, PHOTO_REQUEST_GALLERY);
         }else {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
                 ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 1); //申请储存权限
 
+            intent.setDataAndType(Uri.fromFile(tempFile), "application/vnd.android.package-archive");
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivityForResult(intent, PHOTO_REQUEST_GALLERY2);
         }
     }
@@ -358,21 +407,34 @@ public class TimeEditActivity extends AppCompatActivity {
         Log.e("URI", uri.toString());
         // 裁剪图片意图
         Intent intent = new Intent("com.android.camera.action.CROP");
+
+        File cutfile = new File(Environment.getDataDirectory(), "selectedpic.png");
+        if (cutfile.exists()){
+            cutfile.delete();
+        }
+
+        //申请线程读取权限
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+
         intent.setDataAndType(uri, "image/*");
         intent.putExtra("crop", "true");
         // 裁剪框的比例，1：1
-        intent.putExtra("aspectX", 1);
-        intent.putExtra("aspectY", 1);
+        intent.putExtra("aspectX", 412);
+        intent.putExtra("aspectY", 270);
         // 裁剪后输出图片的尺寸大小
-        intent.putExtra("outputX", 150);
-        intent.putExtra("outputY", 150);
+        intent.putExtra("outputX", 412);
+        intent.putExtra("outputY", 270);
         intent.putExtra("scale", true);//黑边
-        intent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(tempFile));
+        intent.putExtra(MediaStore.EXTRA_OUTPUT,Uri.fromFile(tempFile));  //Uri.fromFile(tempFile)
+        Log.e("tempFile", Uri.fromFile(tempFile).toString());
         // 图片格式
         intent.putExtra("outputFormat", Bitmap.CompressFormat.JPEG.toString());
         intent.putExtra("noFaceDetection", true);// 取消人脸识别
         intent.putExtra("return-data", true);// true:不返回uri，false：返回uri
+
         startActivityForResult(intent, PHOTO_REQUEST_CUT);
+
     }  //对图片的剪切操作
 
     private boolean hasSdcard() {
