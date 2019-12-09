@@ -1,10 +1,5 @@
 package com.example.itime.ui.colors;
 
-import android.app.Activity;
-import android.app.AlertDialog;
-import android.app.Dialog;
-import android.content.Context;
-import android.content.DialogInterface;
 import android.graphics.Color;
 import android.graphics.LinearGradient;
 import android.graphics.Shader;
@@ -15,25 +10,17 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.SeekBar;
 import android.widget.TextView;
-import android.widget.Toast;
-import android.widget.Toolbar;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.fragment.app.DialogFragment;
-import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 
-import com.example.itime.MainActivity;
+import com.example.itime.ItimeMainActivity;
 import com.example.itime.R;
-
-import java.util.Objects;
 
 public class ColorsFragment extends DialogFragment {
     private ColorsViewModel colorsViewModel;
@@ -86,7 +73,7 @@ public class ColorsFragment extends DialogFragment {
 
                 String int_color_rgb= "RGB:" + String.valueOf(rgb);
                 int_rgb.setText(int_color_rgb);
-                ((MainActivity)  getActivity()).changeThemeColor(rgb);
+                ((ItimeMainActivity)  getActivity()).changeThemeColor(rgb);
                 //toolBar.setBackgroundColor(Color.rgb(r,g,b));
             }
 
@@ -102,7 +89,7 @@ public class ColorsFragment extends DialogFragment {
 
                 String int_color_rgb= "RGB:" + String.valueOf(rgb);
                 int_rgb.setText(int_color_rgb);
-                ((MainActivity)  getActivity()).changeThemeColor(rgb);
+                ((ItimeMainActivity)  getActivity()).changeThemeColor(rgb);
                 //toolBar.setBackgroundColor(Color.rgb(r,g,b));
             }
         });
