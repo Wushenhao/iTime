@@ -12,8 +12,10 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.ColorFilter;
+import android.graphics.PixelFormat;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.drawable.BitmapDrawable;
@@ -54,13 +56,15 @@ import androidx.core.content.res.ResourcesCompat;
 
 import com.example.itime.model.Setting;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
 
-public class TimeEditActivity extends AppCompatActivity {
+public class TimeEditActivity extends AppCompatActivity implements Serializable {
 
     public static final int PHOTO_REQUEST_GALLERY = 901;
     public static final String PHOTO_FILE_NAME = "default_image.jpg";
@@ -120,7 +124,6 @@ public class TimeEditActivity extends AppCompatActivity {
 
         editTimeTitle=(EditText)findViewById(R.id.edit_title_content);
         editTimeAddition=(EditText)findViewById(R.id.edit_addition_content);
-        //editTimeDate=(EditText)findViewById(R.id.edit_date);
 
         buttonCancel=(Button)findViewById(R.id.button_cancel);
         buttonOk=(Button)findViewById(R.id.button_ok);
@@ -130,9 +133,12 @@ public class TimeEditActivity extends AppCompatActivity {
             public void onClick(View view) {
                 Intent intent = new Intent();
                 editTimeDate = calendar;
+                byte[] itempic = bitmap2Bytes(drawableToBitamp(temp.getBackground())); //二进制数组图片
+
                 intent.putExtra("time_title", editTimeTitle.getText().toString().trim());
                 intent.putExtra("time_addition", editTimeAddition.getText().toString().trim());
-                intent.putExtra("time_date", editTimeDate.getTimeInMillis());
+                intent.putExtra("time_date", formatdate.format(editTimeDate.getTime()));
+                intent.putExtra("time_picture", itempic);
 
                 setResult(RESULT_OK, intent);
                 TimeEditActivity.this.finish();
@@ -262,7 +268,7 @@ public class TimeEditActivity extends AppCompatActivity {
                 Uri uri = data.getData();
                 String path = getAbsoluteImagePath(context,uri);
                 filepath=Uri.parse("file://"+path);
-                Log.e("filepath", filepath.getPath());
+                Log.e("uri", uri.toString());
                 Log.e("filepath", filepath.toString());
 
                 crop(Uri.parse("file://"+path));//调用剪贴图片代码
@@ -337,8 +343,11 @@ public class TimeEditActivity extends AppCompatActivity {
                 String[] selectionArgs = {id};
                 filePath = getDataColumn(context, MediaStore.Images.Media.EXTERNAL_CONTENT_URI, selection, selectionArgs);
             } else if (isDownloadsDocument(uri)) { // DownloadsProvider
+
                 Uri contentUri = ContentUris.withAppendedId(Uri.parse("content://downloads/public_downloads"), Long.valueOf(documentId));
+                Log.e("uri", uri.toString());
                 filePath = getDataColumn(context, contentUri, null, null);
+                //Log.e("filePath", filePath.toString());
             }
         } else if ("content".equalsIgnoreCase(uri.getScheme())){
             // 如果是 content 类型的 Uri
@@ -353,13 +362,18 @@ public class TimeEditActivity extends AppCompatActivity {
     private static String getDataColumn(Context context, Uri uri, String selection, String[] selectionArgs) {
         String path = null;
 
-        String[] projection = new String[]{MediaStore.Images.Media.DATA};
+        final String column = "_data";
+        final String[] projection = {column};
+        //String[] projection = new String[]{MediaStore.Images.Media.DATA};
+
         Cursor cursor = null;
         try {
             cursor = context.getContentResolver().query(uri, projection, selection, selectionArgs, null);
             if (cursor != null && cursor.moveToFirst()) {
-                int columnIndex = cursor.getColumnIndexOrThrow(projection[0]);
+                int columnIndex = cursor.getColumnIndexOrThrow(column);
+                //int columnIndex = cursor.getColumnIndexOrThrow(projection[0]);
                 path = cursor.getString(columnIndex);
+                Log.e("filePath", "file://"+path);
             }
         } catch (Exception e) {
             if (cursor != null) {
@@ -378,17 +392,20 @@ public class TimeEditActivity extends AppCompatActivity {
     }
 
     public void gallery() {
-        Intent intent=new Intent(Intent.ACTION_GET_CONTENT);//ACTION_OPEN_DOCUMENT
+        Intent intent=new Intent(Intent.ACTION_GET_CONTENT);//ACTION_OPEN_DOCUMENT,ACTION_GET_CONTENT
         /*
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("image/jpeg");
          */
         File imagePath = new File(Environment.getExternalStorageDirectory(), "Download");
+
         tempFile = new File(imagePath, PHOTO_FILE_NAME);
+        if(tempFile.exists())
+            Log.e("FILE", "File exist");
 
         if(android.os.Build.VERSION.SDK_INT>=android.os.Build.VERSION_CODES.KITKAT) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
-                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 1); //申请储存权限
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 1); //申请读取权限
 
             intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             Uri contentUri = FileProvider.getUriForFile(context, BuildConfig.APPLICATION_ID + ".fileProvider", tempFile);
@@ -397,7 +414,7 @@ public class TimeEditActivity extends AppCompatActivity {
             startActivityForResult(intent, PHOTO_REQUEST_GALLERY);
         }else {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
-                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 1); //申请储存权限
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 1); //申请读取权限
 
             intent.setDataAndType(Uri.fromFile(tempFile), "application/vnd.android.package-archive");
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -457,6 +474,26 @@ public class TimeEditActivity extends AppCompatActivity {
             return false;
         }
     }  //判断储存卡是否可用
+
+    public static Bitmap drawableToBitamp(Drawable drawable) {
+        Bitmap bitmap;
+        int w = drawable.getIntrinsicWidth();
+        int h = drawable.getIntrinsicHeight();
+        System.out.println("Drawable转Bitmap");
+        Bitmap.Config config = drawable.getOpacity() != PixelFormat.OPAQUE ? Bitmap.Config.ARGB_8888 : Bitmap.Config.RGB_565;
+        bitmap = Bitmap.createBitmap(w,h,config);
+        //注意，下面三行代码要用到，否在在View或者surfaceview里的canvas.drawBitmap会看不到图
+        Canvas canvas = new Canvas(bitmap);
+        drawable.setBounds(0, 0, w, h);
+        drawable.draw(canvas);
+        return bitmap;
+    } //drawable转化成bitmap的方法
+
+    public static byte[] bitmap2Bytes(Bitmap bm){
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        bm.compress(Bitmap.CompressFormat.PNG, 100, baos);
+        return baos.toByteArray();
+    }  //bitmap转化成byte数组
 
     private void changeSettingColor(int color) {
         colorFilter = new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN);

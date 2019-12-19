@@ -6,11 +6,13 @@ import android.content.res.ColorStateList;
 import android.os.Bundle;
 
 import com.example.itime.model.Date;
+import com.example.itime.model.FileDataSource;
 import com.example.itime.ui.timing.TimingFragment;
 import com.example.itime.ui.timing.TimingViewModel;
 import com.google.android.material.appbar.CollapsingToolbarLayout;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 
@@ -44,14 +46,15 @@ import java.util.List;
 public class ItimeMainActivity extends AppCompatActivity {
 
     public static final int REQUEST_CODE_NEW_TIME= 900;
+    public ArrayList<Date> theDate;
+    private int theColor;
+    private FileDataSource fileDataSource;
     private AppBarConfiguration mAppBarConfiguration;
     private Toolbar toolbar;
     private CollapsingToolbarLayout collapsingToolbarLayout;
     private FloatingActionButton fab;
     private NavigationView navigationView;
     private DrawerLayout drawerlayout;
-    private DateArrayAdapter theAdapter;
-    private ArrayList<Date> theDates;
     private Context context;
 
     @Override
@@ -62,12 +65,10 @@ public class ItimeMainActivity extends AppCompatActivity {
                 View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
         setContentView(R.layout.activity_main);
 
-        theDates = new ArrayList<Date>();
-        theDates.add(new Date("日期","长按使用日期计算器","长按使用日期计算器",R.drawable.ic_setting_date));
-        theAdapter=new DateArrayAdapter(this,R.layout.item_time,theDates);
-
         toolbar = (Toolbar) findViewById(R.id.toolbar);
         toolbar.setTitle(getString(R.string.app_name));
+        theDate = new ArrayList<Date>();
+
         collapsingToolbarLayout = findViewById(R.id.collapsing_toolbar_layout);
         collapsingToolbarLayout.setExpandedTitleColor(getResources().getColor(android.R.color.transparent)); //设置CollapsingToolbarLayout展开时渐变透明
         collapsingToolbarLayout.setCollapsedTitleTextColor(getResources().getColor(android.R.color.white)) ; //设置CollapsingToolbarLayout折叠后标题的颜色
@@ -79,6 +80,9 @@ public class ItimeMainActivity extends AppCompatActivity {
         // Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         fab = findViewById(R.id.fab);
+
+        InitData();   //初始化主题色和listview
+        /*
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -88,6 +92,7 @@ public class ItimeMainActivity extends AppCompatActivity {
                 //Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG).setAction("Action", null).show();
             }
         });
+        */
 
         /*
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
@@ -102,8 +107,11 @@ public class ItimeMainActivity extends AppCompatActivity {
                 .build();
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment);
 
+        /*
         final TimingViewModel timingViewModel = ViewModelProviders.of(this).get(TimingViewModel.class);
         timingViewModel.getAdapter().getValue(theAdapter);
+         */
+
         /*
         Bundle bundle = new Bundle();
         bundle.putSerializable("theAdapter",theAdapter);
@@ -116,7 +124,6 @@ public class ItimeMainActivity extends AppCompatActivity {
         ActionBarDrawerToggle actionBarDrawerToggle=new ActionBarDrawerToggle(this,drawerlayout,toolbar,R.string.nav_header_title,R.string.nav_header_title);
         actionBarDrawerToggle.syncState();
         drawerlayout.addDrawerListener(actionBarDrawerToggle);
-
     }
 
     @Override
@@ -133,15 +140,21 @@ public class ItimeMainActivity extends AppCompatActivity {
                 || super.onSupportNavigateUp();
     }
 
+    /*
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode,resultCode,data);
         switch(requestCode) {
             case REQUEST_CODE_NEW_TIME:
                 if (resultCode == RESULT_OK) {
+                    Bundle bundle= new Bundle();
                     String title = data.getStringExtra("time_title");
                     String addition = data.getStringExtra("time_addition");
                     String date = data.getStringExtra("time_date");
+
+                    bundle.putString("title",title);
+                    bundle.putString("addition",addition);
+                    bundle.putString("date",date);
 
                     //theBooks.add(position+1, new Book(title,addition,date,R.drawable.new_book));   //在当前位置下一位插入
                     //theAdapter.notifyDataSetChanged(); //通知adapter底层数据已改变，修改数据
@@ -150,39 +163,29 @@ public class ItimeMainActivity extends AppCompatActivity {
                 break;
         }
     }   //从EditActivty返回后的操作
+    */
 
     public void changeThemeColor(int color){
         collapsingToolbarLayout.setContentScrimColor(color);
         fab.setBackgroundTintList(ColorStateList.valueOf(color));
+        theColor=color;
     } //修改主题颜色
 
-    public class DateArrayAdapter extends ArrayAdapter<Date> implements Serializable
-    {
-        private int resourceid;
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        fileDataSource.save(theColor);
+    } //程序被返回键销毁时，能够保存数据
 
-        public DateArrayAdapter(@NonNull Context context, int resource, @NonNull List<Date> objects) {
-            super(context, resource, objects);
-            this.resourceid = resource;
+    private void InitData(){
+        fileDataSource=new FileDataSource(this);
+        theDate=fileDataSource.load();
+        theColor=fileDataSource.loadcolor();
+        if (theDate.size()==0) {
         }
 
-        @NonNull
-        @Override
-
-        public View getView(int position, View convertView, ViewGroup parent) {
-            LayoutInflater mInflater= LayoutInflater.from(this.getContext());
-            View date = mInflater.inflate(this.resourceid,null);
-
-            ImageView img = (ImageView)date.findViewById(R.id.img_picture);
-            TextView name = (TextView)date.findViewById(R.id.date_name);
-            TextView detail = (TextView)date.findViewById(R.id.date_detail);
-            TextView msg = (TextView)date.findViewById(R.id.date_msg);
-
-            Date date_item = this.getItem(position);
-            img.setImageResource(date_item.getCoverResourceId());
-            name.setText(date_item.getName());
-            detail.setText(date_item.getDetail());
-            msg.setText(date_item.getMessage());
-            return date;
+        if (theColor != 0){
+            changeThemeColor(theColor);
         }
     }
 }

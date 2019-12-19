@@ -8,12 +8,14 @@ import com.example.itime.ItimeMainActivity;
 
 public class TimingViewModel extends ViewModel {
 
-    private MutableLiveData<ItimeMainActivity.DateArrayAdapter> mAdapter;
+    private MutableLiveData<String> mText;
 
-    public LiveData<ItimeMainActivity.DateArrayAdapter> getAdapter() {
-        if (mAdapter == null){
-            mAdapter = new MutableLiveData<>();
-        }
-        return mAdapter;
+    public TimingViewModel() {
+        mText = new MutableLiveData<>();
+        mText.setValue("This is gallery fragment");
+    }
+
+    public LiveData<String> getText() {
+        return mText;
     }
 }

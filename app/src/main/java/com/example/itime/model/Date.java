@@ -1,16 +1,18 @@
 package com.example.itime.model;
 
+import android.graphics.drawable.Drawable;
+
 import java.io.Serializable;
 
 public class Date implements Serializable {
     private String Name,Detail,Message;
-    private int CoverResourceId;
+    private byte[] Cover;
 
-    public Date(String name,String detail, String message, int coverResourceId) {
+    public Date(String name,String detail, String message, byte[] cover) {
         Name = name;
         Detail = detail;
         Message=message;
-        CoverResourceId = coverResourceId;
+        Cover = cover;
     }
 
     public String getName() {
@@ -37,11 +39,11 @@ public class Date implements Serializable {
         Message = message;
     }
 
-    public int getCoverResourceId() {
-        return CoverResourceId;
+    public byte[] getCover() {
+        return Cover;
     }
 
-    public void setCoverResourceId(int coverResourceId) {
-        CoverResourceId = coverResourceId;
+    public void setCover(byte[] cover) {
+        Cover = cover;
     }
 }

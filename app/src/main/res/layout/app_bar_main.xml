@@ -25,6 +25,7 @@
             android:layout_height="match_parent">
 
             <ImageView
+                android:id="@+id/collapsing_toolbar_pic"
                 android:scaleType="centerCrop"
                 android:fitsSystemWindows="true"
                 android:src="@drawable/ic_menu_abc"

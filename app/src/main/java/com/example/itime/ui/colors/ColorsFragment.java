@@ -159,4 +159,5 @@ public class ColorsFragment extends DialogFragment {
 
         return Color.rgb(red,green,blue);
     }  //将hsl三个值转换为对应的rgb整型值得方法
+
 }
