@@ -12,6 +12,7 @@ import com.example.itime.ui.timing.TimingViewModel;
 import com.google.android.material.appbar.CollapsingToolbarLayout;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
+import android.os.CountDownTimer;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -49,6 +50,7 @@ public class ItimeMainActivity extends AppCompatActivity {
     public static final int REQUEST_CODE_UPDATE_TIME= 910;
     public ArrayList<Date> theDate;
     public int theColor;
+    public CountDownTimer Timer;
     private FileDataSource fileDataSource;
     private AppBarConfiguration mAppBarConfiguration;
     private Toolbar toolbar;

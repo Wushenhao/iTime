@@ -8,7 +8,9 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.icu.text.DateFormat;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -40,8 +42,11 @@ import com.google.android.material.appbar.CollapsingToolbarLayout;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.io.Serializable;
+import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
+import java.util.Locale;
 
 import static android.app.Activity.RESULT_OK;
 import static android.content.ContentValues.TAG;
@@ -59,6 +64,13 @@ public class TimingFragment extends Fragment implements Serializable{
     private FloatingActionButton fab;
     private AppBarLayout appbarLayout;
     private ImageView collapsingToolbarPic;
+    private TextView textView1;
+    private TextView textView2;
+    private TextView textView3;
+    private DateFormat formattime =  DateFormat.getDateTimeInstance();
+    private Calendar calendar = Calendar.getInstance(Locale.CHINA);
+    private long timeStamp;
+    private int count=1;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -74,16 +86,11 @@ public class TimingFragment extends Fragment implements Serializable{
         fab = this.getActivity().findViewById(R.id.fab);  //获得activityd的fab控件
         theDates = ((ItimeMainActivity)  getActivity()).theDate;
         theAdapter=new DateArrayAdapter(this.getActivity(),R.layout.item_time,theDates);
+        textView1 = this.getActivity().findViewById(R.id.textView1);
+        textView2 = this.getActivity().findViewById(R.id.textView2);
+        textView3 = this.getActivity().findViewById(R.id.textView3);
 
-        if (null != theDates && theDates.size() !=0) {
-            Drawable pic = new BitmapDrawable(BitmapFactory.decodeByteArray(theDates.get(0).getCover(),0,theDates.get(0).getCover().length));
-            collapsingToolbarPic.setImageDrawable(pic);
-            appbarLayout.setExpanded(true);
-        }
-        else {
-            collapsingToolbarPic.setImageDrawable(ContextCompat.getDrawable(this.getActivity(), R.drawable.clock));
-            appbarLayout.setExpanded(false);
-        }  //判断是否有时间表项，有则展开并设置沉浸式任务栏图片，无则折叠
+        InitView(0);
 
         listViewSuper = (ListView)root.findViewById(R.id.list_view_timing);
         listViewSuper.setAdapter(theAdapter);
@@ -97,6 +104,14 @@ public class TimingFragment extends Fragment implements Serializable{
                 intent.putExtra("color", theColors);//传输主题颜色
                 intent.putExtra("position", -1);
                 startActivityForResult(intent, REQUEST_CODE_NEW_TIME);
+            }
+        });
+
+        collapsingToolbarPic.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View v) {
+                InitView(count);
+                count = (count+1) % listViewSuper.getCount();
             }
         });
 
@@ -128,16 +143,7 @@ public class TimingFragment extends Fragment implements Serializable{
                             public void onClick(DialogInterface dialogInterface, int i) {
                                 theDates.remove(itemposition);
                                 theAdapter.notifyDataSetChanged(); //通知adapter底层数据已改变，修改数据
-
-                                if (null != theDates && theDates.size() !=0) {
-                                    Drawable pic = new BitmapDrawable(BitmapFactory.decodeByteArray(theDates.get(0).getCover(),0,theDates.get(0).getCover().length));
-                                    collapsingToolbarPic.setImageDrawable(pic);
-                                    appbarLayout.setExpanded(true);
-                                }
-                                else {
-                                    collapsingToolbarPic.setImageDrawable(ContextCompat.getDrawable(TimingFragment.this.getActivity(), R.drawable.clock));
-                                    appbarLayout.setExpanded(false);
-                                } //判断是否有时间表项，有则展开并设置沉浸式任务栏图片，无则折叠
+                                InitView(0);
 
                                 Toast.makeText(getActivity(), "删除成功！", Toast.LENGTH_SHORT).show();
                             }
@@ -175,9 +181,38 @@ public class TimingFragment extends Fragment implements Serializable{
             TextView name = (TextView)date.findViewById(R.id.date_name);
             TextView detail = (TextView)date.findViewById(R.id.date_detail);
             TextView msg = (TextView)date.findViewById(R.id.date_msg);
+            final TextView todate = (TextView)date.findViewById(R.id.toDate);
+            DateFormat formattime =  DateFormat.getDateTimeInstance();
+            Calendar calendar = Calendar.getInstance(Locale.CHINA);
+            CountDownTimer timer;
+            long timeStamp;
 
             Date date_item = this.getItem(position);
             Drawable pic = new BitmapDrawable(BitmapFactory.decodeByteArray(date_item.getCover(),0,date_item.getCover().length)); //byte转换为drawable
+
+            java.util.Date time = null;
+            try {
+                time = formattime.parse(date_item.getDetail());
+            } catch (ParseException e) {
+                e.printStackTrace();
+            }
+
+            if (time != null){
+                calendar.setTime(time);
+                timeStamp = calendar.getTimeInMillis() - System.currentTimeMillis();
+                timer = new CountDownTimer(timeStamp,1000) {
+                    @Override
+                    public void onTick(long millisUntilFinished) {
+                        long day = millisUntilFinished / (1000 * 60 * 60 * 24);//天
+                        todate.setText("只剩" + day + "天");
+                    }
+                    @Override
+                    public void onFinish() {
+                        todate.setText("已经历");
+                    }
+                };
+                timer.start();
+            }
 
             img.setImageDrawable(pic);
             name.setText(date_item.getName());
@@ -224,15 +259,7 @@ public class TimingFragment extends Fragment implements Serializable{
 
                     setListViewHeightBasedOnChildren(listViewSuper);  //从TimeEditActivity返回没有重新创建实例，因此要再设置一次listview高度
 
-                    if (null != theDates && theDates.size() !=0) {
-                        Drawable pic = new BitmapDrawable(BitmapFactory.decodeByteArray(theDates.get(0).getCover(),0,theDates.get(0).getCover().length));
-                        collapsingToolbarPic.setImageDrawable(pic);
-                        appbarLayout.setExpanded(true);
-                    }
-                    else {
-                        collapsingToolbarPic.setImageDrawable(ContextCompat.getDrawable(TimingFragment.this.getActivity(), R.drawable.clock));
-                        appbarLayout.setExpanded(false);
-                    } //判断是否有时间表项，有则展开并设置沉浸式任务栏图片，无则折叠
+                    InitView(0);
 
                     Toast.makeText(getActivity(), "新建成功", Toast.LENGTH_SHORT).show();
                     break;
@@ -256,20 +283,60 @@ public class TimingFragment extends Fragment implements Serializable{
 
                     theAdapter.notifyDataSetChanged();
 
-                    if (null != theDates && theDates.size() !=0) {
-                        Drawable pic = new BitmapDrawable(BitmapFactory.decodeByteArray(theDates.get(0).getCover(),0,theDates.get(0).getCover().length));
-                        collapsingToolbarPic.setImageDrawable(pic);
-                        appbarLayout.setExpanded(true);
-                    }
-                    else {
-                        collapsingToolbarPic.setImageDrawable(ContextCompat.getDrawable(TimingFragment.this.getActivity(), R.drawable.clock));
-                        appbarLayout.setExpanded(false);
-                    } //判断是否有时间表项，有则展开并设置沉浸式任务栏图片，无则折叠
+                    InitView(0);
 
                     Toast.makeText(getActivity(), "修改成功", Toast.LENGTH_SHORT).show();
                     break;
                 }
         }
     }   //从EditActivty返回后的操作
+
+    private void InitView(int i){
+        if (null != theDates && theDates.size() !=i) {
+            Drawable pic = new BitmapDrawable(BitmapFactory.decodeByteArray(theDates.get(i).getCover(),0,theDates.get(i).getCover().length));
+            collapsingToolbarPic.setImageDrawable(pic);
+            textView1.setText(theDates.get(i).getName());
+            textView2.setText(theDates.get(i).getDetail());
+
+            java.util.Date time = null;
+            try {
+                time = formattime.parse(theDates.get(i).getDetail());
+            } catch (ParseException e) {
+                e.printStackTrace();
+            }
+
+            if (time != null){
+                calendar.setTime(time);
+                timeStamp = calendar.getTimeInMillis() - System.currentTimeMillis();
+                if (((ItimeMainActivity)  getActivity()).Timer != null)
+                    ((ItimeMainActivity)  getActivity()).Timer .cancel();
+                ((ItimeMainActivity)  getActivity()).Timer = new CountDownTimer(timeStamp,1000) {
+                    @Override
+                    public void onTick(long millisUntilFinished) {
+                        long day = millisUntilFinished / (1000 * 60 * 60 * 24);//天
+                        long hour = (millisUntilFinished - day * (1000 * 60 * 60 * 24)) / (1000 * 60 *60);  //时
+                        long minute = (millisUntilFinished - day * (1000 * 60 * 60 * 24) - hour * (1000 * 60 * 60)) / (1000 * 60);   //分
+                        long second = (millisUntilFinished - day * (1000 * 60 * 60 * 24) - hour * (1000 * 60 * 60) - minute * (1000 * 60)) / 1000;  //秒
+                        textView3.setText(day + "天" + hour + "时" + minute + "分" + second + "秒");
+                    }
+                    @Override
+                    public void onFinish() {
+                        textView3.setText("已经历");
+                    }
+                };
+                ((ItimeMainActivity)  getActivity()).Timer.start();
+            }
+
+            appbarLayout.setExpanded(true);
+        }
+        else {
+            collapsingToolbarPic.setImageDrawable(ContextCompat.getDrawable(this.getActivity(), R.drawable.clock));
+            ((ItimeMainActivity)  getActivity()).Timer.cancel();
+            textView1.setText(null);
+            textView2.setText(null);
+            textView3.setText(null);
+            appbarLayout.setExpanded(false);
+        }  //判断是否有时间表项，有则展开并设置沉浸式任务栏图片，无则折叠
+    }
 
 }
