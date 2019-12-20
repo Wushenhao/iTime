@@ -19,11 +19,13 @@ import android.graphics.PixelFormat;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.icu.text.DateFormat;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.os.Environment;
 import android.os.StrictMode;
 import android.provider.DocumentsContract;
@@ -59,8 +61,11 @@ import com.example.itime.model.Setting;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.Serializable;
+import java.lang.reflect.Field;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
@@ -72,9 +77,7 @@ public class TimeEditActivity extends AppCompatActivity implements Serializable 
     public static final int PHOTO_REQUEST_CAMERA = 903;
     public static final int PHOTO_REQUEST_CUT =904;
     private EditText editTimeTitle,editTimeAddition;
-    private Calendar editTimeDate;  //用于计算距离设定日期的倒计时
-    private ColorFilter colorFilter;
-    private Drawable drawable;
+    private String editTimeDate;  //用于计算距离设定日期的倒计时
     private Button buttonOk,buttonCancel;
     private SettingArrayAdapter theAdapter;
     private ArrayList<Setting> theSettings;
@@ -83,9 +86,14 @@ public class TimeEditActivity extends AppCompatActivity implements Serializable 
     private RelativeLayout temp;    //当前背景容器的layout
     private Context context;
 
+    private int dateClick = 0;
+    private int pictureClick = 0;
+    private TextView count_time;
+    private CountDownTimer timer;
+    private long timeStamp = 86400000;
+
     private ListView item_date;
     DateFormat formattime =  DateFormat.getDateTimeInstance();
-    DateFormat formatdate =  DateFormat.getDateInstance();
     //获取日期格式器对象
     Calendar calendar = Calendar.getInstance(Locale.CHINA);
     //获取日期格式器对象
@@ -110,9 +118,8 @@ public class TimeEditActivity extends AppCompatActivity implements Serializable 
         StrictMode.VmPolicy.Builder builder = new StrictMode.VmPolicy.Builder();
         StrictMode.setVmPolicy(builder.build());
         builder.detectFileUriExposure();
-
         temp=(RelativeLayout)findViewById(R.id.edit_relativelayout);
-        drawable= ResourcesCompat.getDrawable(getResources(), R.drawable.side_nav_bar, null); //获取背景图
+        final int position= getIntent().getIntExtra("position", 0);
         int color= getIntent().getIntExtra("color", Color.rgb(0,150,136));
         changeSettingColor(color);
 
@@ -122,8 +129,22 @@ public class TimeEditActivity extends AppCompatActivity implements Serializable 
         ListView listViewSuper = (ListView) findViewById(R.id.list_view_setting);
         listViewSuper.setAdapter(theAdapter);
 
+        count_time = (TextView) findViewById(R.id.time);
         editTimeTitle=(EditText)findViewById(R.id.edit_title_content);
         editTimeAddition=(EditText)findViewById(R.id.edit_addition_content);
+
+        if (position != -1){
+            String title= getIntent().getStringExtra("time_title");
+            String addition= getIntent().getStringExtra("time_addition");
+            String date= getIntent().getStringExtra("time_date");
+            byte[] picture= getIntent().getByteArrayExtra("time_picture");
+            Drawable pic = new BitmapDrawable(BitmapFactory.decodeByteArray(picture,0,picture.length)); //byte转换为drawable
+
+            editTimeTitle.setText(title);
+            editTimeAddition.setText(addition);
+            theSettings.get(0).setMessage(date);
+            temp.setBackground(pic);
+        }
 
         buttonCancel=(Button)findViewById(R.id.button_cancel);
         buttonOk=(Button)findViewById(R.id.button_ok);
@@ -131,17 +152,25 @@ public class TimeEditActivity extends AppCompatActivity implements Serializable 
         buttonOk.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Intent intent = new Intent();
-                editTimeDate = calendar;
-                byte[] itempic = bitmap2Bytes(drawableToBitamp(temp.getBackground())); //二进制数组图片
+                String test = "长按使用日期计算器";
+                if ( !theSettings.get(0).getMessage().equals(test)){
+                    Intent intent = new Intent();
+                    byte[] itempic=null;
+                    if (!(temp.getBackground() instanceof ColorDrawable))  //判断是否设置图片，不是则itempic为空
+                        itempic = bitmap2Bytes(drawableToBitamp(temp.getBackground())); //二进制数组图片
 
-                intent.putExtra("time_title", editTimeTitle.getText().toString().trim());
-                intent.putExtra("time_addition", editTimeAddition.getText().toString().trim());
-                intent.putExtra("time_date", formatdate.format(editTimeDate.getTime()));
-                intent.putExtra("time_picture", itempic);
+                    intent.putExtra("position", position);
+                    intent.putExtra("time_title", editTimeTitle.getText().toString().trim());
+                    intent.putExtra("time_addition", editTimeAddition.getText().toString().trim());
+                    if (dateClick != 0)
+                        intent.putExtra("time_date", editTimeDate);
+                    if (pictureClick != 0)
+                        intent.putExtra("time_picture", itempic);
 
-                setResult(RESULT_OK, intent);
-                TimeEditActivity.this.finish();
+                    setResult(RESULT_OK, intent);
+                    TimeEditActivity.this.finish();
+                }
+                else Toast.makeText(TimeEditActivity.this,"时间未选择", Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -185,35 +214,85 @@ public class TimeEditActivity extends AppCompatActivity implements Serializable 
                                     //同DatePickerDialog控件，此处实现所有的回调操作
                                     calendar.set(Calendar.HOUR_OF_DAY,hourOfDay);
                                     calendar.set(Calendar.MINUTE,minute);
+                                    calendar.set(Calendar.SECOND,0);
 
                                     calendar.set(Calendar.YEAR, datePickerDialog.getDatePicker().getYear());
                                     calendar.set(Calendar.MONTH, datePickerDialog.getDatePicker().getMonth());
                                     calendar.set(Calendar.DAY_OF_MONTH, datePickerDialog.getDatePicker().getDayOfMonth());
 
                                     Setting settingAtPosition=theSettings.get(0);   //新建Setting对象，复制为当前的位置的ArrayList<Setting>的Setting对象
+                                    editTimeDate = formattime.format(calendar.getTime());
+                                    timeStamp = calendar.getTimeInMillis() - System.currentTimeMillis();
+
                                     settingAtPosition.setMessage(formattime.format(calendar.getTime()));
                                     theAdapter.notifyDataSetChanged(); //通知adapter底层数据已改变，修改数据
                                     //将页面TextView的显示更新为最新时间
+
+                                    if (timer != null)
+                                        timer.cancel();
+                                    timer = new CountDownTimer(timeStamp,1000) {
+                                        @Override
+                                        public void onTick(long millisUntilFinished) {
+                                            long day = millisUntilFinished / (1000 * 60 * 60 * 24);//天
+                                            long hour = (millisUntilFinished - day * (1000 * 60 * 60 * 24)) / (1000 * 60 *60);  //时
+                                            long minute = (millisUntilFinished - day * (1000 * 60 * 60 * 24) - hour * (1000 * 60 * 60)) / (1000 * 60);   //分
+                                            long second = (millisUntilFinished - day * (1000 * 60 * 60 * 24) - hour * (1000 * 60 * 60) - minute * (1000 * 60)) / 1000;  //秒
+                                            count_time.setText(day + "天" + hour + "时 " + minute + "分 " + second + "秒 ");
+                                        }
+
+                                        @Override
+                                        public void onFinish() {
+
+                                        }
+                                    };
+                                    timer.start();
+                                    dateClick++;
                                  }
                              },calendar.get(Calendar.HOUR_OF_DAY),calendar.get(Calendar.MINUTE),true);
 
                             //此处显示时间弹窗，修改日历控件的日期，之后修改item的内容，在此处作为按钮响应实现所有的回调操作
                             timePickerDialog.show(); //显示时间弹窗
 
+                            calendar.set(Calendar.HOUR_OF_DAY,0);
+                            calendar.set(Calendar.MINUTE,0);
+                            calendar.set(Calendar.SECOND,0); //只选择日期则时分秒皆为0
+
                             calendar.set(Calendar.YEAR, datePickerDialog.getDatePicker().getYear());
                             calendar.set(Calendar.MONTH, datePickerDialog.getDatePicker().getMonth());
                             calendar.set(Calendar.DAY_OF_MONTH, datePickerDialog.getDatePicker().getDayOfMonth());
 
                             Setting settingAtPosition=theSettings.get(0);   //新建Setting对象，复制为当前的位置的ArrayList<Setting>的Setting对象
-                            settingAtPosition.setMessage(formatdate.format(calendar.getTime()));
+                            editTimeDate = formattime.format(calendar.getTime());
+                            timeStamp = calendar.getTimeInMillis() - System.currentTimeMillis();
+
+                            settingAtPosition.setMessage(formattime.format(calendar.getTime()));
                             theAdapter.notifyDataSetChanged(); //通知adapter底层数据已改变，修改数据
+
+                            if (timer != null)
+                                timer.cancel();
+                            timer = new CountDownTimer(timeStamp,1000) {
+                                @Override
+                                public void onTick(long millisUntilFinished) {
+                                    long day = millisUntilFinished / (1000 * 60 * 60 * 24);//天
+                                    long hour = (millisUntilFinished - day * (1000 * 60 * 60 * 24)) / (1000 * 60 *60);  //时
+                                    long minute = (millisUntilFinished - day * (1000 * 60 * 60 * 24) - hour * (1000 * 60 * 60)) / (1000 * 60);   //分
+                                    long second = (millisUntilFinished - day * (1000 * 60 * 60 * 24) - hour * (1000 * 60 * 60) - minute * (1000 * 60)) / 1000;  //秒
+                                    count_time.setText(day + "天" + hour + "时 " + minute + "分 " + second + "秒 ");
+                                }
+
+                                @Override
+                                public void onFinish() {
+
+                                }
+                            };
+                            timer.start();
+                            dateClick++;
                         }
                     });
 
                     datePickerDialog.setButton(DialogInterface.BUTTON_NEGATIVE, "Cancel", new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
-
                         }
                     });
 
@@ -222,7 +301,6 @@ public class TimeEditActivity extends AppCompatActivity implements Serializable 
                 } //设置时间
 
                 else if (position == 2){
-
                     AlertDialog.Builder builder = new AlertDialog.Builder(context);
                     builder.setTitle("选择图片");
                     builder.setMessage("给新建的提醒时间设置醒目的图片吧！");
@@ -246,6 +324,36 @@ public class TimeEditActivity extends AppCompatActivity implements Serializable 
 
             }
         });
+
+        Date date = null;
+        try {
+            date = formattime.parse(theSettings.get(0).getMessage());
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+
+        if (date != null){
+            calendar.setTime(date);
+            timeStamp = calendar.getTimeInMillis() - System.currentTimeMillis();
+            if (timer != null)
+                timer.cancel();
+            timer = new CountDownTimer(timeStamp,1000) {
+                @Override
+                public void onTick(long millisUntilFinished) {
+                    long day = millisUntilFinished / (1000 * 60 * 60 * 24);//天
+                    long hour = (millisUntilFinished - day * (1000 * 60 * 60 * 24)) / (1000 * 60 *60);  //时
+                    long minute = (millisUntilFinished - day * (1000 * 60 * 60 * 24) - hour * (1000 * 60 * 60)) / (1000 * 60);   //分
+                    long second = (millisUntilFinished - day * (1000 * 60 * 60 * 24) - hour * (1000 * 60 * 60) - minute * (1000 * 60)) / 1000;  //秒
+                    count_time.setText(day + "天" + hour + "时 " + minute + "分 " + second + "秒 ");
+                }
+
+                @Override
+                public void onFinish() {
+
+                }
+            };
+            timer.start();
+        }
 
     }
 
@@ -285,7 +393,7 @@ public class TimeEditActivity extends AppCompatActivity implements Serializable 
                 Log.e("uri", Uri.fromFile(tempFile).toString());
 
                 temp.setBackground(picture);
-
+                pictureClick++;
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -496,7 +604,10 @@ public class TimeEditActivity extends AppCompatActivity implements Serializable 
     }  //bitmap转化成byte数组
 
     private void changeSettingColor(int color) {
-        colorFilter = new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN);
+        temp.setBackgroundColor(color);
+        /*
+        colorFilter = new PorterDuffColorFilter(color, PorterDuff.Mode.DST_OVER);
         drawable.setColorFilter(colorFilter);
+        */
     }
 }

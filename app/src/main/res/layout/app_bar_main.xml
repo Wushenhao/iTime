@@ -9,6 +9,7 @@
     tools:context=".ItimeMainActivity">
 
     <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appbar_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:fitsSystemWindows="true"
@@ -28,7 +29,7 @@
                 android:id="@+id/collapsing_toolbar_pic"
                 android:scaleType="centerCrop"
                 android:fitsSystemWindows="true"
-                android:src="@drawable/ic_menu_abc"
+                android:src="@drawable/clock"
 
                 android:background="?attr/colorPrimary"
                 android:layout_width="match_parent"

@@ -46,8 +46,9 @@ import java.util.List;
 public class ItimeMainActivity extends AppCompatActivity {
 
     public static final int REQUEST_CODE_NEW_TIME= 900;
+    public static final int REQUEST_CODE_UPDATE_TIME= 910;
     public ArrayList<Date> theDate;
-    private int theColor;
+    public int theColor;
     private FileDataSource fileDataSource;
     private AppBarConfiguration mAppBarConfiguration;
     private Toolbar toolbar;
@@ -82,22 +83,7 @@ public class ItimeMainActivity extends AppCompatActivity {
         fab = findViewById(R.id.fab);
 
         InitData();   //初始化主题色和listview
-        /*
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent intent=new Intent(ItimeMainActivity.this,TimeEditActivity.class);
-                intent.putExtra("color", fab.getSolidColor());//传输主题颜色
-                startActivityForResult(intent, REQUEST_CODE_NEW_TIME);
-                //Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG).setAction("Action", null).show();
-            }
-        });
-        */
 
-        /*
-        DrawerLayout drawer = findViewById(R.id.drawer_layout);
-        NavigationView navigationView = findViewById(R.id.nav_view);
-        */
         // Passing each menu ID as a set of Ids because each
         // menu should be considered as top level destinations.
         mAppBarConfiguration = new AppBarConfiguration.Builder(
@@ -106,18 +92,6 @@ public class ItimeMainActivity extends AppCompatActivity {
                 .setDrawerLayout(drawerlayout)
                 .build();
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment);
-
-        /*
-        final TimingViewModel timingViewModel = ViewModelProviders.of(this).get(TimingViewModel.class);
-        timingViewModel.getAdapter().getValue(theAdapter);
-         */
-
-        /*
-        Bundle bundle = new Bundle();
-        bundle.putSerializable("theAdapter",theAdapter);
-        Navigation.findNavController(this, R.id.nav_host_fragment).restoreState(bundle); //传输listview的adapter给fragment
-        */
-
         NavigationUI.setupActionBarWithNavController(this, navController, mAppBarConfiguration);
         NavigationUI.setupWithNavController(navigationView, navController);
 
@@ -139,31 +113,6 @@ public class ItimeMainActivity extends AppCompatActivity {
         return NavigationUI.navigateUp(navController, mAppBarConfiguration)
                 || super.onSupportNavigateUp();
     }
-
-    /*
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode,resultCode,data);
-        switch(requestCode) {
-            case REQUEST_CODE_NEW_TIME:
-                if (resultCode == RESULT_OK) {
-                    Bundle bundle= new Bundle();
-                    String title = data.getStringExtra("time_title");
-                    String addition = data.getStringExtra("time_addition");
-                    String date = data.getStringExtra("time_date");
-
-                    bundle.putString("title",title);
-                    bundle.putString("addition",addition);
-                    bundle.putString("date",date);
-
-                    //theBooks.add(position+1, new Book(title,addition,date,R.drawable.new_book));   //在当前位置下一位插入
-                    //theAdapter.notifyDataSetChanged(); //通知adapter底层数据已改变，修改数据
-                    Toast.makeText(this, "新建成功", Toast.LENGTH_SHORT).show();
-                }
-                break;
-        }
-    }   //从EditActivty返回后的操作
-    */
 
     public void changeThemeColor(int color){
         collapsingToolbarLayout.setContentScrimColor(color);

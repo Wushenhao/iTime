@@ -16,10 +16,11 @@
     <string name="time_edit_date">日期</string>
     <string name="time_edit_picture">图片</string>
 
-    <string name="menu_timing">计时</string>
+    <string name="menu_timing">iTime</string>
     <string name="menu_tag">标签</string>
     <string name="menu_parts">小部件</string>
     <string name="menu_colors">主题色</string>
     <string name="menu_setting">设置</string>
     <string name="menu_info">关于</string>
+    <string name="slogan">记录属于你的每一刻</string>
 </resources>

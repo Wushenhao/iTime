@@ -2,6 +2,7 @@ package com.example.itime.ui.timing;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -13,6 +14,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Adapter;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.ListAdapter;
@@ -22,6 +24,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.ListFragment;
 import androidx.lifecycle.Observer;
@@ -32,6 +35,7 @@ import com.example.itime.R;
 import com.example.itime.TimeEditActivity;
 import com.example.itime.model.Date;
 import com.example.itime.model.FileDataSource;
+import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.appbar.CollapsingToolbarLayout;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
@@ -42,13 +46,18 @@ import java.util.List;
 import static android.app.Activity.RESULT_OK;
 import static android.content.ContentValues.TAG;
 import static com.example.itime.ItimeMainActivity.REQUEST_CODE_NEW_TIME;
+import static com.example.itime.ItimeMainActivity.REQUEST_CODE_UPDATE_TIME;
+import static com.example.itime.TimeEditActivity.bitmap2Bytes;
+import static com.example.itime.TimeEditActivity.drawableToBitamp;
 
 public class TimingFragment extends Fragment implements Serializable{
     private TimingViewModel timingViewModel;
     private DateArrayAdapter theAdapter;
     private ArrayList<Date> theDates;
+    private int theColors;
     private ListView listViewSuper;
     private FloatingActionButton fab;
+    private AppBarLayout appbarLayout;
     private ImageView collapsingToolbarPic;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
@@ -60,40 +69,90 @@ public class TimingFragment extends Fragment implements Serializable{
         final TextView textView = root.findViewById(R.id.text_timing);
 
         collapsingToolbarPic = this.getActivity().findViewById(R.id.collapsing_toolbar_pic);
+        appbarLayout = this.getActivity().findViewById(R.id.appbar_layout);
 
         fab = this.getActivity().findViewById(R.id.fab);  //获得activityd的fab控件
         theDates = ((ItimeMainActivity)  getActivity()).theDate;
-
-        //theDates.add(new Date("日期","长按使用日期计算器","长按使用日期计算器",R.drawable.hamster));
         theAdapter=new DateArrayAdapter(this.getActivity(),R.layout.item_time,theDates);
 
         if (null != theDates && theDates.size() !=0) {
             Drawable pic = new BitmapDrawable(BitmapFactory.decodeByteArray(theDates.get(0).getCover(),0,theDates.get(0).getCover().length));
             collapsingToolbarPic.setImageDrawable(pic);
+            appbarLayout.setExpanded(true);
         }
+        else {
+            collapsingToolbarPic.setImageDrawable(ContextCompat.getDrawable(this.getActivity(), R.drawable.clock));
+            appbarLayout.setExpanded(false);
+        }  //判断是否有时间表项，有则展开并设置沉浸式任务栏图片，无则折叠
 
         listViewSuper = (ListView)root.findViewById(R.id.list_view_timing);
         listViewSuper.setAdapter(theAdapter);
         setListViewHeightBasedOnChildren(listViewSuper);
-        //collapsingToolbarPic.setBackgroundColor(getResources().getColor(R.color.colorBackGround));
 
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 Intent intent=new Intent(getActivity(), TimeEditActivity.class);
-                intent.putExtra("color", fab.getSolidColor());//传输主题颜色
+                theColors = ((ItimeMainActivity) getActivity()).theColor;  //获得主题色
+                intent.putExtra("color", theColors);//传输主题颜色
+                intent.putExtra("position", -1);
                 startActivityForResult(intent, REQUEST_CODE_NEW_TIME);
-                //Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG).setAction("Action", null).show();
             }
         });
-        /*
-        timingViewModel.getAdapter().observe(this, new Observer<ItimeMainActivity.DateArrayAdapter>() {
+
+        listViewSuper.setOnItemClickListener(new AdapterView.OnItemClickListener(){
             @Override
-            public void onChanged(@Nullable ItimeMainActivity.DateArrayAdapter adapter) {
-                dateArrayAdapter = adapter;
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                Intent intent=new Intent(getActivity(), TimeEditActivity.class);
+                theColors = ((ItimeMainActivity) getActivity()).theColor;  //获得主题色
+                intent.putExtra("color", theColors);//传输主题颜色
+                intent.putExtra("position", position);
+                intent.putExtra("time_title", theDates.get(position).getName());
+                intent.putExtra("time_addition", theDates.get(position).getMessage());
+                intent.putExtra("time_date", theDates.get(position).getDetail());
+                intent.putExtra("time_picture", theDates.get(position).getCover());
+
+                startActivityForResult(intent, REQUEST_CODE_UPDATE_TIME);
             }
         });
-        */
+
+        listViewSuper.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener(){
+            @Override
+            public boolean onItemLongClick (AdapterView<?> parent, View view, int position, long id) {
+                final int itemposition=position;
+                new android.app.AlertDialog.Builder(getActivity())
+                        .setTitle("询问")
+                        .setMessage("你确定要删除这一项吗？")
+                        .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                theDates.remove(itemposition);
+                                theAdapter.notifyDataSetChanged(); //通知adapter底层数据已改变，修改数据
+
+                                if (null != theDates && theDates.size() !=0) {
+                                    Drawable pic = new BitmapDrawable(BitmapFactory.decodeByteArray(theDates.get(0).getCover(),0,theDates.get(0).getCover().length));
+                                    collapsingToolbarPic.setImageDrawable(pic);
+                                    appbarLayout.setExpanded(true);
+                                }
+                                else {
+                                    collapsingToolbarPic.setImageDrawable(ContextCompat.getDrawable(TimingFragment.this.getActivity(), R.drawable.clock));
+                                    appbarLayout.setExpanded(false);
+                                } //判断是否有时间表项，有则展开并设置沉浸式任务栏图片，无则折叠
+
+                                Toast.makeText(getActivity(), "删除成功！", Toast.LENGTH_SHORT).show();
+                            }
+                        })   //点击确定来删除
+                        .setNegativeButton("取消", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                //取消则不做任何操作
+                            }
+                        })
+                        .create().show();
+
+                return true;
+            }
+        });
         return root;
     }
 
@@ -152,25 +211,64 @@ public class TimingFragment extends Fragment implements Serializable{
             case REQUEST_CODE_NEW_TIME:
                 if (resultCode == RESULT_OK) {
                     Bundle bundle= new Bundle();
+                    int position = data.getIntExtra("position",0);
                     String title = data.getStringExtra("time_title");
                     String addition = data.getStringExtra("time_addition");
                     String date = data.getStringExtra("time_date");
                     byte[] itempic = data.getByteArrayExtra("time_picture");
 
+                    if (itempic == null)
+                        itempic = bitmap2Bytes(drawableToBitamp(ContextCompat.getDrawable(this.getActivity(), R.drawable.clock)));  //如果没有设置新建的图片，获取默认图片
                     theDates.add(new Date(title,date,addition,itempic)); //listViewSuper.getCount(),
+                    theAdapter.notifyDataSetChanged();
 
-                    //theBooks.add(position+1, new Book(title,addition,date,R.drawable.new_book));   //在当前位置下一位插入
-                    //theAdapter.notifyDataSetChanged(); //通知adapter底层数据已改变，修改数据
+                    setListViewHeightBasedOnChildren(listViewSuper);  //从TimeEditActivity返回没有重新创建实例，因此要再设置一次listview高度
+
+                    if (null != theDates && theDates.size() !=0) {
+                        Drawable pic = new BitmapDrawable(BitmapFactory.decodeByteArray(theDates.get(0).getCover(),0,theDates.get(0).getCover().length));
+                        collapsingToolbarPic.setImageDrawable(pic);
+                        appbarLayout.setExpanded(true);
+                    }
+                    else {
+                        collapsingToolbarPic.setImageDrawable(ContextCompat.getDrawable(TimingFragment.this.getActivity(), R.drawable.clock));
+                        appbarLayout.setExpanded(false);
+                    } //判断是否有时间表项，有则展开并设置沉浸式任务栏图片，无则折叠
+
+                    Toast.makeText(getActivity(), "新建成功", Toast.LENGTH_SHORT).show();
+                    break;
+                }
+
+            case REQUEST_CODE_UPDATE_TIME:
+                if (resultCode == RESULT_OK){
+                    Bundle bundle= new Bundle();
+                    int position = data.getIntExtra("position",0);
+                    String title = data.getStringExtra("time_title");
+                    String addition = data.getStringExtra("time_addition");
+                    String date = data.getStringExtra("time_date");
+                    byte[] itempic = data.getByteArrayExtra("time_picture");
+
+                    if (date == null)
+                        date = theDates.get(position).getDetail();
+                    if (itempic == null)
+                        itempic = theDates.get(position).getCover();  //如果没有更新时间和图片的话，不改变原来的图片和时间
+                    theDates.remove(position);
+                    theDates.add(position,new Date(title,date,addition,itempic)); //listViewSuper.getCount(),
+
                     theAdapter.notifyDataSetChanged();
 
                     if (null != theDates && theDates.size() !=0) {
                         Drawable pic = new BitmapDrawable(BitmapFactory.decodeByteArray(theDates.get(0).getCover(),0,theDates.get(0).getCover().length));
                         collapsingToolbarPic.setImageDrawable(pic);
+                        appbarLayout.setExpanded(true);
                     }
+                    else {
+                        collapsingToolbarPic.setImageDrawable(ContextCompat.getDrawable(TimingFragment.this.getActivity(), R.drawable.clock));
+                        appbarLayout.setExpanded(false);
+                    } //判断是否有时间表项，有则展开并设置沉浸式任务栏图片，无则折叠
 
-                    Toast.makeText(getActivity(), "新建成功", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getActivity(), "修改成功", Toast.LENGTH_SHORT).show();
+                    break;
                 }
-                break;
         }
     }   //从EditActivty返回后的操作
 

@@ -24,7 +24,6 @@ import com.example.itime.R;
 
 public class ColorsFragment extends DialogFragment {
     private ColorsViewModel colorsViewModel;
-
     private SeekBar color_RGB;
     private static int hue,rgb = 0;
     private TextView int_rgb;
