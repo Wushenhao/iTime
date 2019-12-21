@@ -143,6 +143,7 @@ public class TimingFragment extends Fragment implements Serializable{
                             public void onClick(DialogInterface dialogInterface, int i) {
                                 theDates.remove(itemposition);
                                 theAdapter.notifyDataSetChanged(); //通知adapter底层数据已改变，修改数据
+                                count=1;
                                 InitView(0);
 
                                 Toast.makeText(getActivity(), "删除成功！", Toast.LENGTH_SHORT).show();
@@ -259,6 +260,7 @@ public class TimingFragment extends Fragment implements Serializable{
 
                     setListViewHeightBasedOnChildren(listViewSuper);  //从TimeEditActivity返回没有重新创建实例，因此要再设置一次listview高度
 
+                    count=1;
                     InitView(0);
 
                     Toast.makeText(getActivity(), "新建成功", Toast.LENGTH_SHORT).show();
@@ -283,6 +285,7 @@ public class TimingFragment extends Fragment implements Serializable{
 
                     theAdapter.notifyDataSetChanged();
 
+                    count=1;
                     InitView(0);
 
                     Toast.makeText(getActivity(), "修改成功", Toast.LENGTH_SHORT).show();
@@ -331,7 +334,8 @@ public class TimingFragment extends Fragment implements Serializable{
         }
         else {
             collapsingToolbarPic.setImageDrawable(ContextCompat.getDrawable(this.getActivity(), R.drawable.clock));
-            ((ItimeMainActivity)  getActivity()).Timer.cancel();
+            if (((ItimeMainActivity)  getActivity()).Timer != null)
+                ((ItimeMainActivity)  getActivity()).Timer.cancel();
             textView1.setText(null);
             textView2.setText(null);
             textView3.setText(null);

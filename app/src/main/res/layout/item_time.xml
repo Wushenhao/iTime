@@ -6,15 +6,15 @@
     android:layout_height="100dp">
 
     <FrameLayout
-        android:layout_width="100dp"
+        android:layout_width="160dp"
         android:layout_height="100dp"
         android:layout_gravity="fill"
         android:layout_weight="1">
 
         <ImageView
             android:id="@+id/img_picture"
-            android:layout_width="140dp"
-            android:layout_height="140dp"
+            android:layout_width="160dp"
+            android:layout_height="120dp"
             android:layout_gravity="center"
             android:layout_weight="1"
             tools:srcCompat="@tools:sample/avatars" />
@@ -24,14 +24,14 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:textSize="20sp"
             android:text="TextView"
-            android:textColor="@color/cardview_light_background"/>
+            android:textColor="@color/cardview_light_background"
+            android:textSize="18sp" />
 
     </FrameLayout>
 
     <LinearLayout
-        android:layout_width="257dp"
+        android:layout_width="250dp"
         android:layout_height="wrap_content"
         android:layout_marginLeft="5pt"
         android:layout_marginTop="7pt"

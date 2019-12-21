@@ -69,6 +69,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+import static android.media.MediaRecorder.VideoSource.CAMERA;
+
 public class TimeEditActivity extends AppCompatActivity implements Serializable {
 
     public static final int PHOTO_REQUEST_GALLERY = 901;
@@ -282,7 +284,7 @@ public class TimeEditActivity extends AppCompatActivity implements Serializable 
 
                                 @Override
                                 public void onFinish() {
-
+                                    count_time.setText("已经历");
                                 }
                             };
                             timer.start();
@@ -453,9 +455,7 @@ public class TimeEditActivity extends AppCompatActivity implements Serializable 
             } else if (isDownloadsDocument(uri)) { // DownloadsProvider
 
                 Uri contentUri = ContentUris.withAppendedId(Uri.parse("content://downloads/public_downloads"), Long.valueOf(documentId));
-                Log.e("uri", uri.toString());
                 filePath = getDataColumn(context, contentUri, null, null);
-                //Log.e("filePath", filePath.toString());
             }
         } else if ("content".equalsIgnoreCase(uri.getScheme())){
             // 如果是 content 类型的 Uri
@@ -472,16 +472,13 @@ public class TimeEditActivity extends AppCompatActivity implements Serializable 
 
         final String column = "_data";
         final String[] projection = {column};
-        //String[] projection = new String[]{MediaStore.Images.Media.DATA};
 
         Cursor cursor = null;
         try {
             cursor = context.getContentResolver().query(uri, projection, selection, selectionArgs, null);
             if (cursor != null && cursor.moveToFirst()) {
                 int columnIndex = cursor.getColumnIndexOrThrow(column);
-                //int columnIndex = cursor.getColumnIndexOrThrow(projection[0]);
                 path = cursor.getString(columnIndex);
-                Log.e("filePath", "file://"+path);
             }
         } catch (Exception e) {
             if (cursor != null) {
@@ -501,10 +498,6 @@ public class TimeEditActivity extends AppCompatActivity implements Serializable 
 
     public void gallery() {
         Intent intent=new Intent(Intent.ACTION_GET_CONTENT);//ACTION_OPEN_DOCUMENT,ACTION_GET_CONTENT
-        /*
-        intent.addCategory(Intent.CATEGORY_OPENABLE);
-        intent.setType("image/jpeg");
-         */
         File imagePath = new File(Environment.getExternalStorageDirectory(), "Download");
 
         tempFile = new File(imagePath, PHOTO_FILE_NAME);
@@ -532,6 +525,11 @@ public class TimeEditActivity extends AppCompatActivity implements Serializable 
 
     public void camera() {
         Intent intent = new Intent("android.media.action.IMAGE_CAPTURE");
+        if(android.os.Build.VERSION.SDK_INT>=android.os.Build.VERSION_CODES.KITKAT) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE}, CAMERA);  //申请权限
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
+        }
+
         // 判断存储卡是否可以用，可用进行存储
         if (hasSdcard()) {
             intent.putExtra(MediaStore.EXTRA_OUTPUT,
@@ -605,9 +603,5 @@ public class TimeEditActivity extends AppCompatActivity implements Serializable 
 
     private void changeSettingColor(int color) {
         temp.setBackgroundColor(color);
-        /*
-        colorFilter = new PorterDuffColorFilter(color, PorterDuff.Mode.DST_OVER);
-        drawable.setColorFilter(colorFilter);
-        */
     }
 }

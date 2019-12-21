@@ -27,13 +27,14 @@
             android:layout_alignParentTop="true"
             android:layout_alignParentEnd="true"
             android:layout_alignParentBottom="true"
-            android:layout_marginStart="110dp"
+            android:layout_marginStart="80dp"
             android:layout_marginTop="70dp"
             android:layout_marginEnd="20dp"
             android:layout_marginBottom="120dp"
             android:ems="10"
             android:inputType="textPersonName"
-            android:text="@string/time_edit_title_content" />
+            android:hint="@string/time_edit_title_content"
+            android:textColorHint="@color/colorBackGround"/>
 
         <Button
             android:id="@+id/button_cancel"
@@ -62,15 +63,18 @@
             android:id="@+id/edit_addition_content"
             android:layout_width="248dp"
             android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
             android:layout_alignParentTop="true"
             android:layout_alignParentEnd="true"
             android:layout_alignParentBottom="true"
+            android:layout_marginStart="80dp"
             android:layout_marginTop="144dp"
             android:layout_marginEnd="20dp"
             android:layout_marginBottom="46dp"
             android:ems="10"
             android:inputType="textPersonName"
-            android:text="@string/time_edit_addition_content" />
+            android:hint="@string/time_edit_addition_content"
+            android:textColorHint="@color/colorBackGround"/>
 
         <TextView
             android:id="@+id/edit_title"
@@ -78,7 +82,7 @@
             android:layout_height="wrap_content"
             android:layout_alignParentStart="true"
             android:layout_alignParentBottom="true"
-            android:layout_marginStart="50dp"
+            android:layout_marginStart="30dp"
             android:layout_marginBottom="130dp"
             android:text="@string/time_edit_title" />
 
@@ -88,7 +92,7 @@
             android:layout_height="wrap_content"
             android:layout_alignParentStart="true"
             android:layout_alignParentBottom="true"
-            android:layout_marginStart="50dp"
+            android:layout_marginStart="30dp"
             android:layout_marginBottom="60dp"
             android:text="@string/time_edit_addition" />
 
@@ -103,8 +107,9 @@
     <TextView
         android:id="@+id/time"
         android:layout_width="match_parent"
+        android:layout_height="30dp"
+        android:layout_marginBottom="30dp"
         android:gravity="center"
-        android:layout_height="40dp"
         android:textSize="20dp" />
 
 </LinearLayout>
