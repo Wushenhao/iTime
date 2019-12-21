@@ -110,8 +110,10 @@ public class TimingFragment extends Fragment implements Serializable{
         collapsingToolbarPic.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View v) {
-                InitView(count);
-                count = (count+1) % listViewSuper.getCount();
+                if (listViewSuper.getCount() != 0) {
+                    InitView(count);
+                    count = (count + 1) % listViewSuper.getCount();
+                }                  
             }
         });
 
